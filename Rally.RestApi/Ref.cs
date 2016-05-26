@@ -11,26 +11,29 @@ namespace Rally.RestApi
   public static class Ref
   {
     #region Regexes
-    private static List<Regex> regexes = new List<Regex>() {
 
-            //dynatype collection ref (/portfolioitem/feature/1234/children)
-            new Regex (".*/(\\w{2,}/\\w+)/(\\d+/\\w+)(?:\\.js)*(?:\\?.*)*$"),
-            
-            //dynatype ref (/portfolioitem/feature/1234)
-            new Regex (".*/(\\w{2,}/\\w+)/(\\d+)(?:\\.js)*(?:\\?.*)*$"),
+    private static readonly List<Regex> Regexes = new List<Regex>
+    {
+      //dynatype collection ref (/portfolioitem/feature/1234/children)
+      new Regex(".*/(\\w{2,}/\\w+)/(\\d+/\\w+)(?:\\.js)*(?:\\?.*)*$"),
 
-            //collection ref (/defect/1234/tasks)
-            new Regex (".*/(\\w+/-?\\d+)/(\\w+)(?:\\.js)*(?:\\?.*)*$"),
+      //dynatype ref (/portfolioitem/feature/1234)
+      new Regex(".*/(\\w{2,}/\\w+)/(\\d+)(?:\\.js)*(?:\\?.*)*$"),
 
-            //basic ref (/defect/1234)
-            new Regex (".*/(\\w+)/(-?\\d+)(?:\\.js)*(?:\\?.*)*$"),
+      //collection ref (/defect/1234/tasks)
+      new Regex(".*/(\\w+/-?\\d+)/(\\w+)(?:\\.js)*(?:\\?.*)*$"),
 
-            //permission ref (/workspacepermission/123u456w1)
-            new Regex (".*/(\\w+)/(\\d+u\\d+[pw]\\d+)(?:\\.js)*(?:\\?.*)*$"),
-        };
+      //basic ref (/defect/1234)
+      new Regex(".*/(\\w+)/(-?\\d+)(?:\\.js)*(?:\\?.*)*$"),
+
+      //permission ref (/workspacepermission/123u456w1)
+      new Regex(".*/(\\w+)/(\\d+u\\d+[pw]\\d+)(?:\\.js)*(?:\\?.*)*$"),
+    };
+
     #endregion
 
     #region IsRef
+
     /// <summary>
     /// Determine whether the specified string is a reference
     /// </summary>
@@ -51,9 +54,11 @@ namespace Rally.RestApi
     {
       return GetMatch(reference) != null;
     }
+
     #endregion
 
     #region GetRelativeRef
+
     /// <summary>
     /// Get a relative ref from the specified ref.
     /// All server information will be stripped before being returned.
@@ -73,12 +78,14 @@ namespace Rally.RestApi
       Match m = GetMatch(reference);
       if (m != null)
         return String.Format("/{0}/{1}", m.Groups[1].Value, m.Groups[2].Value);
-      else
-        return null;
+      
+      return null;
     }
+
     #endregion
 
     #region GetTypeFromRef
+
     /// <summary>
     /// Get the type from the specified ref
     /// </summary>
@@ -97,12 +104,14 @@ namespace Rally.RestApi
       Match m = GetMatch(reference);
       if (m != null)
         return m.Groups[1].Value;
-      else
-        return null;
+      
+      return null;
     }
+
     #endregion
 
     #region GetOidFromRef
+
     /// <summary>
     /// Get the object id from the specified ref
     /// </summary>
@@ -121,15 +130,17 @@ namespace Rally.RestApi
       Match m = GetMatch(reference);
       if (m != null)
         return m.Groups[2].Value;
-      else
-        return null;
+      
+      return null;
     }
+
     #endregion
 
     #region Helper: GetMatch
+
     private static Match GetMatch(string reference)
     {
-      foreach (Regex r in regexes)
+      foreach (Regex r in Regexes)
       {
         if (r.IsMatch(reference ?? ""))
         {
@@ -139,6 +150,7 @@ namespace Rally.RestApi
 
       return null;
     }
+
     #endregion
   }
 }

@@ -26,7 +26,7 @@ namespace Rally.RestApi
     /// </example>
     public Request(string artifactName)
     {
-      Configure(artifactName: artifactName);
+      Configure(artifactName);
     }
     /// <summary>
     /// Create a new Request for the specified collection. (ie Defect.Tasks)
@@ -62,10 +62,10 @@ namespace Rally.RestApi
     private void Configure(string artifactName = null, DynamicJsonObject collection = null)
     {
       ArtifactName = artifactName;
-      this.collection = collection;
+      _collection = collection;
       Parameters = new Dictionary<string, dynamic>();
       Fetch = new List<string>();
-      PageSize = MAX_PAGE_SIZE;
+      PageSize = MaxPageSize;
       Start = 1;
       Limit = PageSize;
     }
@@ -75,11 +75,11 @@ namespace Rally.RestApi
     /// <summary>
     /// The maximum page size (200).
     /// </summary>
-    public const int MAX_PAGE_SIZE = 200;
+    public const int MaxPageSize = 200;
 
     internal Dictionary<string, dynamic> Parameters { get; private set; }
 
-    private DynamicJsonObject collection;
+    private DynamicJsonObject _collection;
     /// <summary>
     /// An upper bound on the total results to be returned.
     /// </summary>
@@ -181,19 +181,17 @@ namespace Rally.RestApi
           {
             case "user":
             case "subscription":
-              return "/" + ArtifactName.ToLower() + "s"; //special case for user/subscription endpoints
+              return string.Format("/{0}s", ArtifactName.ToLower()); //special case for user/subscription endpoints
           }
 
-          return "/" + ArtifactName.ToLower();
+          return string.Format("/{0}", ArtifactName.ToLower());
         }
-        else
-        {
-          return Ref.GetRelativeRef(collection["_ref"]);
-        }
+
+        return Ref.GetRelativeRef(_collection["_ref"]);
       }
     }
 
-    internal virtual string ShortRequestUrl { get { return String.Format("{0}{1}", Endpoint, ".js"); ; } }
+    internal virtual string ShortRequestUrl { get { return String.Format("{0}{1}", Endpoint, ".js"); } }
 
     internal virtual string RequestUrl { get { return BuildQueryString(); } }
 
@@ -208,7 +206,7 @@ namespace Rally.RestApi
     /// <returns>true if added. false if the key already existed</returns>
     public bool AddParameter(string key, string value)
     {
-      if (GetParameterValue(key, null) != null)
+      if (GetParameterValue(key) != null)
         return false;
       Parameters[key] = value;
       return true;
@@ -220,9 +218,10 @@ namespace Rally.RestApi
     {
       if (Parameters.ContainsKey(keyValue))
         return Parameters[keyValue];
-      else
-        return defaultValue;
+
+      return defaultValue;
     }
+
     #endregion
 
     #region GetDataToSend
@@ -230,8 +229,10 @@ namespace Rally.RestApi
     {
       StringBuilder sb = new StringBuilder();
       Dictionary<string, string> data = new Dictionary<string, string>();
-      int pageSize = Math.Min(Math.Min(MAX_PAGE_SIZE, PageSize), Limit);
+      int pageSize = Math.Min(Math.Min(MaxPageSize, PageSize), Limit);
+
       data.Add("pagesize", pageSize.ToString());
+
       if (Fetch.Count == 0)
         data.Add("fetch", "true");
       else
@@ -249,10 +250,7 @@ namespace Rally.RestApi
           else
             sb.Append(",");
 
-          if (urlEncodeData)
-            sb.Append(HttpUtility.UrlEncode(currentFetch));
-          else
-            sb.Append(currentFetch);
+          sb.Append(urlEncodeData ? HttpUtility.UrlEncode(currentFetch) : currentFetch);
         }
 
         data.Add(keyword, sb.ToString());
@@ -270,20 +268,24 @@ namespace Rally.RestApi
         bool first = true;
         bool objectIdFound = false;
         sb.Clear();
+
         foreach (string currentOrder in orderList)
         {
           if (currentOrder.Contains("ObjectID") || currentOrder.Contains("ObjectID desc"))
+          {
             objectIdFound = true;
+          }
 
           if (first)
+          {
             first = false;
+          }
           else
+          {
             sb.Append(",");
+          }
 
-          if (urlEncodeData)
-            sb.Append(HttpUtility.UrlEncode(currentOrder));
-          else
-            sb.Append(currentOrder);
+          sb.Append(urlEncodeData ? HttpUtility.UrlEncode(currentOrder) : currentOrder);
         }
 
         if (!objectIdFound)
@@ -310,10 +312,7 @@ namespace Rally.RestApi
         else
           dataValue = value.ToString();
 
-        if (urlEncodeData)
-          data.Add(currentParameter, HttpUtility.UrlEncode(dataValue));
-        else
-          data.Add(currentParameter, dataValue);
+        data.Add(currentParameter, urlEncodeData ? HttpUtility.UrlEncode(dataValue) : dataValue);
       }
 
       return data;
@@ -363,18 +362,22 @@ namespace Rally.RestApi
     public static Request CreateFromUrl(string url)
     {
       Request request = new Request();
-      int index = url.IndexOf("?");
+      int index = url.IndexOf("?", StringComparison.Ordinal);
+
       string primaryUrl;
+
       if (index <= 0)
+      {
         primaryUrl = url;
+      }
       else
       {
         primaryUrl = url.Substring(0, index);
         string parameters = url.Substring(index + 1);
-        string[] parameterParts = parameters.Split(new char[] { '&' });
+        string[] parameterParts = parameters.Split('&');
         foreach (string paramPart in parameterParts)
         {
-          string[] paramParts = paramPart.Split(new char[] { '=' });
+          string[] paramParts = paramPart.Split('=');
           if (paramParts.Length != 2)
             continue;
 
@@ -395,7 +398,7 @@ namespace Rally.RestApi
           {
             if (!valueString.Equals("true", StringComparison.InvariantCultureIgnoreCase))
             {
-              string[] fetchParts = valueString.Split(new string[] { "," }, StringSplitOptions.None);
+              string[] fetchParts = valueString.Split(new[] { "," }, StringSplitOptions.None);
               List<string> fetchString = new List<string>();
               fetchString.AddRange(fetchParts);
               request.Fetch = fetchString;
@@ -426,7 +429,7 @@ namespace Rally.RestApi
       {
         DynamicJsonObject collection = new DynamicJsonObject();
         collection["_ref"] = primaryUrl;
-        request.collection = collection;
+        request._collection = collection;
       }
       else
         request.ArtifactName = artifactUrl;
@@ -450,18 +453,16 @@ namespace Rally.RestApi
     /// </example>
     public Request Clone()
     {
-      Request request;
-      if (collection != null)
-        request = new Request(collection);
-      else
-        request = new Request(ArtifactName);
-
+      Request request = _collection != null ? new Request(_collection) : new Request(ArtifactName);
       request.Limit = Limit;
+
       foreach (string dictionaryKey in Parameters.Keys)
       {
         request.Parameters[dictionaryKey] = Parameters[dictionaryKey];
       }
-      request.Fetch = new List<string>(this.Fetch);
+
+      request.Fetch = new List<string>(Fetch);
+
       return request;
     }
     #endregion
