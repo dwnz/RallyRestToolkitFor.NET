@@ -52,7 +52,7 @@ namespace Rally.RestApi.Json
 		public override bool TryGetMember(GetMemberBinder binder, out object result)
 		{
 			result = GetMember(binder.Name);
-			return (result != null) ? true : false;
+			return (result != null);
 		}
 
 		/// <summary>
